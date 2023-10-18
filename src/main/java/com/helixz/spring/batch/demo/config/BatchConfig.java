@@ -10,22 +10,24 @@ import org.springframework.batch.core.configuration.annotation.EnableBatchProces
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
-import org.springframework.batch.item.database.JdbcBatchItemWriter;
-import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
+
 import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
+import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.WritableResource;
 
-import javax.sql.DataSource;
 
 import static com.helixz.spring.batch.demo.constant.BatchJobConstant.*;
 
@@ -60,6 +62,32 @@ public class BatchConfig {
                     setTargetType(Order.class);
                 }}).build();
     }
+    private WritableResource outputResource = new FileSystemResource("output/outputData.csv");
+    @Bean
+    public FlatFileItemWriter<Order> writer()
+    {
+        //Create writer instance
+        FlatFileItemWriter<Order> writer = new FlatFileItemWriter<>();
+
+        //Set output file location
+        writer.setResource(outputResource);
+
+        //All job repetitions should "append" to same output file
+        writer.setAppendAllowed(true);
+
+        //Name field values sequence based on object properties
+        writer.setLineAggregator(new DelimitedLineAggregator<Order>() {
+            {
+                setDelimiter(",");
+                setFieldExtractor(new BeanWrapperFieldExtractor<Order>() {
+                    {
+                        setNames(new String[] { "orderRef" });
+                    }
+                });
+            }
+        });
+        return writer;
+    }
 
     @Bean
     public LineMapper<Order> lineMapper() {
@@ -81,17 +109,10 @@ public class BatchConfig {
         return new OrderProcessor();
     }
 
-    @Bean
-    public JdbcBatchItemWriter<Order> writer(final DataSource dataSource) {
-        return new JdbcBatchItemWriterBuilder<Order>()
-                .itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
-                .sql("INSERT INTO orders (order_ref, amount, order_date, note) VALUES (:orderRef, :amount, :orderDate, :note)")
-                .dataSource(dataSource)
-                .build();
-    }
+
 
     @Bean
-    public Step step(JdbcBatchItemWriter<Order> writer) {
+    public Step step(FlatFileItemWriter<Order> writer) {
         return stepBuilderFactory.get(BATCH_STEP)
                 .<Order, Order> chunk(5)
                 .reader(reader())
