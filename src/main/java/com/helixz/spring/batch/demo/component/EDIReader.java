@@ -1,6 +1,5 @@
 package com.helixz.spring.batch.demo.component;
 
-import com.helixz.spring.batch.demo.Main2;
 import com.imsweb.x12.Loop;
 import com.imsweb.x12.reader.X12Reader;
 import org.springframework.batch.item.NonTransientResourceException;
@@ -21,7 +20,7 @@ import java.util.List;
 public class EDIReader implements ItemReader<Loop> {
     private Iterator<Loop> loops;
     public EDIReader() throws IOException {
-        URL url = Main2.class.getResource("/x12_277CA_accepted.txt");
+        URL url = EDIReader.class.getResource("/x12_277CA_accepted.txt");
         X12Reader reader = new X12Reader(X12Reader.FileType.ANSI837_5010_X214, new File(url.getFile()));
          loops = reader.getLoops().iterator();
     }

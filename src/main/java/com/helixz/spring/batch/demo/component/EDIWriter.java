@@ -1,6 +1,5 @@
 package com.helixz.spring.batch.demo.component;
 
-import com.helixz.spring.batch.demo.Main2;
 import com.imsweb.x12.LineBreak;
 import com.imsweb.x12.Loop;
 import com.imsweb.x12.Separators;
